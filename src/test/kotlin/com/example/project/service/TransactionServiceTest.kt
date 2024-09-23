@@ -50,6 +50,23 @@ class TransactionServiceTest {
     }
 
     @Test
+    fun `prioritize category by name`() {
+        val account = Account(1, User(1, "John Doe"))
+        val balance = Balance(1, account, "FOOD", 10.0)
+        val transaction = Transaction(1, account.id, 5.0, "EATS", "5811")
+
+        `when`(accountRepository.findById(account.id)).thenReturn(Optional.of(account))
+        `when`(balanceRepository.findByCategoryAndAccount("FOOD", account)).thenReturn(balance)
+
+        val response = transactionService.authorizeTransaction(transaction)
+
+        assertEquals("{ \"code\": \"00\", \"message\": \"TRANSACTION_APPROVED\" }", response)
+        verify(balanceRepository).save(balance)
+        verify(transactionRepository).save(transaction)
+    }
+
+
+    @Test
     fun `should return insufficient funds when balance is not sufficient`() {
         val account = Account(1, User(1, "John Doe"))
         val balance = Balance(1, account, "MEAL", 2.0)
@@ -62,7 +79,7 @@ class TransactionServiceTest {
 
         assertEquals("{ \"code\": \"51\", \"message\": \"INSUFFICIENT_FUNDS\", \"description\": \"Not enough cash balance available.\" }", response)
         verify(balanceRepository, never()).save(balance)
-        verify(transactionRepository, never()).save(transaction)
+        verify(transactionRepository).save(transaction)
     }
 
     @Test
@@ -80,7 +97,7 @@ class TransactionServiceTest {
     fun `should fallback to CASH when mcc not mapping and balance is sufficient`() {
         val account = Account(1, User(1, "John Doe"))
         val cashBalance = Balance(2, account, "CASH", 10.0)
-        val transaction = Transaction(1, account.id, 5.0, "PADARIA DO ZE SAO PAULO BR TEST", "5811")
+        val transaction = Transaction(1, account.id, 5.0, "DO ZE SAO PAULO BR TEST", "5811")
 
         `when`(accountRepository.findById(account.id)).thenReturn(Optional.of(account))
         `when`(balanceRepository.findByCategoryAndAccount("CASH", account)).thenReturn(cashBalance)
@@ -96,7 +113,7 @@ class TransactionServiceTest {
     fun `should fallback to CASH when mcc not mapping and balance is insufficient`() {
         val account = Account(1, User(1, "John Doe"))
         val cashBalance = Balance(2, account, "CASH", 10.0)
-        val transaction = Transaction(1, account.id, 15.0, "PADARIA DO ZE SAO PAULO BR TEST", "5811")
+        val transaction = Transaction(1, account.id, 15.0, "DO ZE SAO PAULO BR TEST", "5811")
 
         `when`(accountRepository.findById(account.id)).thenReturn(Optional.of(account))
         `when`(balanceRepository.findByCategoryAndAccount("CASH", account)).thenReturn(cashBalance)

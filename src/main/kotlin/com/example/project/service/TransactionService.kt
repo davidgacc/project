@@ -1,10 +1,8 @@
 package com.example.project.service
 
 import com.example.project.errors.ErrorDetails
-import com.example.project.model.Account
-import com.example.project.model.Balance
-import com.example.project.model.Transaction
-import com.example.project.model.TransactionResponse
+import com.example.project.errors.ErrorResponses
+import com.example.project.model.*
 import com.example.project.repository.AccountRepository
 import com.example.project.repository.BalanceRepository
 import com.example.project.repository.TransactionRepository
@@ -18,14 +16,24 @@ class TransactionService (private val balanceRepository: BalanceRepository,
                           private val merchantMCCMapping: MerchantMCCMapping ) {
 
     fun authorizeTransaction(transaction: Transaction): String {
-        val account = getAccount(transaction.account) ?: return toJson(
-            TransactionResponse.Failure(ErrorDetails("07", "ACCOUNT_NOT_FOUND", "The specified account does not exist."))
-        )
+        val account = getAccount(transaction.account) ?: return toJson(ErrorResponses.ACCOUNT_NOT_FOUND)
 
+        // Get the category based on the merchant name
+        val category = merchantMCCMapping.getCategoryByMerchant(transaction.merchant)
+
+        // Get the MCC from the merchant name or default MCC if not found
         val mcc = merchantMCCMapping.getMCC(transaction.merchant, transaction.mcc)
-        val category = mapMCCToCategory(mcc)
+        // Get the fallback category based on the MCC
+        val categoryFallback = merchantMCCMapping.mapMCCToCategory(mcc)
 
-        return processTransaction(transaction, account, category)
+        // Prioritize the category derived from the merchant name
+        val finalCategory = if (category != TransactionCategory.CASH.name) {
+            category
+        } else {
+            categoryFallback // Use the fallback category if the merchant category is CASH
+        }
+
+        return processTransaction(transaction, account, finalCategory)
     }
 
     private fun getAccount(accountId: Long): Account? {
@@ -48,7 +56,7 @@ class TransactionService (private val balanceRepository: BalanceRepository,
 
     private fun handleCashFallback(transaction: Transaction, account: Account, category: String): String {
         val cashBalance = getBalanceForCategory(account, category)
-            ?: return toJson(TransactionResponse.Failure(ErrorDetails("51", "CASH_BALANCE_NOT_FOUND", "No cash balance available.")))
+            ?: return toJson(ErrorResponses.CASH_BALANCE_NOT_FOUND)
 
         return if (canDeduct(cashBalance, transaction.totalAmount)) {
             deductAmount(cashBalance, transaction.totalAmount)
@@ -56,7 +64,7 @@ class TransactionService (private val balanceRepository: BalanceRepository,
             toJson(TransactionResponse.Success())
         } else {
             saveTransaction(transaction)
-            toJson(TransactionResponse.Failure(ErrorDetails("51", "INSUFFICIENT_FUNDS", "Not enough cash balance available.")))
+            toJson(ErrorResponses.INSUFFICIENT_FUNDS)
         }
     }
 
@@ -77,26 +85,11 @@ class TransactionService (private val balanceRepository: BalanceRepository,
         transactionRepository.save(transaction)
     }
 
-
     private fun toJson(response: TransactionResponse): String {
         return when (response) {
             is TransactionResponse.Success -> "{ \"code\": \"${response.code}\", \"message\": \"${response.message}\" }"
-            is TransactionResponse.Failure -> "{ \"code\": \"${response.error.code}\", \"message\": \"${response.error.message}\", \"description\": \"${response.error.description}\" }"
+            is TransactionResponse.Failure -> "{ \"code\": \"${response.code}\", \"message\": \"${response.message}\", \"description\": \"${response.description}\" }"
             else -> "{ \"code\": \"99\", \"message\": \"UNKNOWN_ERROR\" }" // Fallback for unexpected cases
         }
-    }
-
-    private fun mapMCCToCategory(mcc: String): String {
-        return when (mcc) {
-            "5411", "5412" -> TransactionCategory.FOOD.name
-            "5811", "5812" -> TransactionCategory.MEAL.name
-            else -> TransactionCategory.CASH.name
-        }
-    }
-
-    enum class TransactionCategory {
-        FOOD,
-        MEAL,
-        CASH
     }
 }

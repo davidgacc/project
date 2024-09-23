@@ -5,8 +5,7 @@ import com.example.project.repository.AccountRepository
 import org.springframework.stereotype.Service
 
 @Service
-class AccountService (private val accountRepository: AccountRepository) {
-
+class AccountService(private val accountRepository: AccountRepository) {
     fun createAccount(account: Account): Account {
         return accountRepository.save(account)
     }
