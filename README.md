@@ -40,3 +40,16 @@ INSERT INTO balances (account_id, category, amount) VALUES
 docker run --name project-app --link postgres-db -p 8080:8080 -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/postgres -e SPRING_DATASOURCE_USERNAME=postgres -e SPRING_DATASOURCE_PASSWORD=postgres project-transaction
 ```
 
+### 3. Test endpoint
+
+In Postman : POST http://localhost:8080/api/authorize
+
+```bash
+{
+    "account": 1, 
+    "totalAmount": 100.00, 
+    "mcc": "5811", 
+    "merchant": "PADARIA DO ZE SAO PAULO BR"
+}
+```
+
