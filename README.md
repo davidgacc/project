@@ -37,10 +37,10 @@ INSERT INTO balances (account_id, category, amount) VALUES
 
 ### 3. Run Your Application Container
 ```bash
-docker run --name project-app --link postgres-db -p 8080:8080 -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/postgres -e SPRING_DATASOURCE_USERNAME=postgres -e SPRING_DATASOURCE_PASSWORD=postgres project-transaction
+docker run -[kotlin](src%2Fmain%2Fkotlin)-name project-app --link postgres-db -p 8080:8080 -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/postgres -e SPRING_DATASOURCE_USERNAME=postgres -e SPRING_DATASOURCE_PASSWORD=postgres project-transaction
 ```
 
-### 3. Test endpoint
+### 4. Test endpoint
 
 In Postman : POST http://localhost:8080/api/authorize
 
@@ -53,3 +53,9 @@ In Postman : POST http://localhost:8080/api/authorize
 }
 ```
 
+### 5. L4
+
+If we have millions accounts into a reasonable number of partitions (e.g., 1,000, 2000 , 5000 or 10,000 partitions).
+Each partition can still process transactions sequentially for the accounts it manages.
+Use some hashing mechanism based on account IDs to determine which partition an account belongs to, ensuring that all transactions for the same account are routed to the same partition.
+For example Kafka supports partitioned topics, where each partition can act as a queue. The idea is to make sure that transactions for the same account always go to the same partition, guaranteeing sequential processing within that partition.
