@@ -37,7 +37,7 @@ INSERT INTO balances (account_id, category, amount) VALUES
 
 ### 3. Run Your Application Container
 ```bash
-docker run -[kotlin](src%2Fmain%2Fkotlin)-name project-app --link postgres-db -p 8080:8080 -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/postgres -e SPRING_DATASOURCE_USERNAME=postgres -e SPRING_DATASOURCE_PASSWORD=postgres project-transaction
+docker run --name project-app --link postgres-db -p 8080:8080 -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/postgres -e SPRING_DATASOURCE_USERNAME=postgres -e SPRING_DATASOURCE_PASSWORD=postgres project-transaction
 ```
 
 ### 4. Test endpoint
